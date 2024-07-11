@@ -1,0 +1,139 @@
+function handler($context, $inputs) {
+  
+  $myVC_url = $inputs.VC_url
+  $myVC_user = $inputs.VC_user
+  $myVC_pass = $context.getsecret($inputs.VC_pass)
+  $myVMK = $inputs.vSAN_iSCSI_VMK
+  $myLUN = $inputs.vSAN_iSCSI_LUN_Prefix
+  $myTarget = $inputs.vSAN_iSCSI_Target
+  $myCluster = $inputs.vSAN_Cluster_Name
+  
+  $lun_size = 100  # default 100gb
+  $witness_lun_size = 1  # default 1gb
+  $witness_lun_name = "witness"  # name of the witness lun 
+  $witness_lun_id = 0  # keep this zero, or greater than number_of_data_luns
+  $number_of_data_luns = 3
+  
+  
+  #
+  # Sanity check the witness lun ID
+  #
+  
+  if ( $witness_lun_id -ne 0 ) {
+      if ( $witness_lun_id -le $number_of_data_luns ) {
+          Write-Host "ERROR: Witness LUN ID should be greater than the number of data luns"
+          exit
+      }
+      
+  }
+  
+  
+  #
+  # Connect to vCenter using the credentials supplied in the 'action constants'
+  #
+
+  $connection = Connect-VIServer -Server $myVC_url -User $myVC_user -Password $myVC_pass -Protocol https -Force
+  Write-Host 'Connected: ' $connection.IsConnected
+  
+
+  
+  #
+  # Check if the iSCSI service is enabled and apply if not
+  #
+  
+  $iscsiServ = Get-VsanClusterConfiguration -Cluster $myCluster
+  Write-Host 'iSCSI Enabled: ' $iscsiServ.IscsiTargetServiceEnabled
+  
+  if ( $iscsiServ.IscsiTargetServiceEnabled ) {
+      Write-Host "iSCSI already enabled on Cluster " $myCluster
+  }
+  else {
+      Write-Host 'Enabling iSCSI'
+
+      $config = Get-VsanClusterConfiguration -Cluster $myCluster
+      Set-VsanClusterConfiguration $config -IscsiTargetServiceEnabled $true -DefaultIscsiNetworkInterface $myVMK
+
+      $iscsiServ = Get-VsanClusterConfiguration -Cluster $myCluster
+      Write-Host 'iSCSI Enabled: ' $iscsiServ.IscsiTargetServiceEnabled
+  }
+  
+
+  #
+  # Check if target exists & create
+  #
+  
+  $share = Get-VsanIscsiTarget -Name $myTarget -Cluster $myCluster
+  
+  if ( -Not $share ) {
+      Write-Host "Target not found, creating..."
+      $share = New-VsanIscsiTarget -Cluster $myCluster -Name $myTarget
+  }  
+
+ 
+  #
+  # Check and Create shared LUNS for iSCSI as needed
+  #
+  
+  # first check/create the three data luns
+  $luns = 1..$number_of_data_luns
+ 
+  foreach ($lun in $luns) {
+      $this_lun = $myLUN + '-' + $lun
+      Write-Host 'this lun: ' $this_lun
+      
+      $lun_test = Get-VsanIscsiLun -target $myTarget -Cluster $myCluster| where { $_.Name -like $this_lun }
+      Write-Host 'lun_test: ' $lun_test
+      
+      
+      if (-Not $lun_test) {
+          Write-Host "lun $lun not found: creating"
+          New-VsanIscsiLun -CapacityGB $lun_size -Name $this_lun -LunId $lun -Target $myTarget
+          
+          $new_lun_test = Get-VsanIscsiLun -target $myTarget -Cluster $myCluster | where { $_.Name -like $this_lun }
+          Write-Host 'new_lun_test: ' $new_lun_test
+      }
+  }
+
+  
+  # check/create the witness lun
+  $witness_lun_test = Get-VsanIscsiLun -target $myTarget -Cluster $myCluster | where { $_.Name -like $witness_lun_name }
+  
+  if (-Not $witness_lun_test) {
+      Write-Host "$witness_lun_name not found: creating"
+      New-VsanIscsiLun -CapacityGB $witness_lun_size -Name $witness_lun_name -LunId $witness_lun_id -Target $myTarget
+      
+      $new_witness_lun_test = Get-VsanIscsiLun -target $myTarget -Cluster $myCluster | where { $_.Name -like $witness_lun_name }
+      Write-Host 'witness_lun_test: ' $new_witness_lun_test
+  }
+  
+  
+  #
+  # Get the iSCSI share owner host and IP address
+  #
+  
+  $host_adapter = Get-VMHostNetworkAdapter -Host $share.IoOwnerVMHost -Name $myVMK
+  $share_ip = $host_adapter.IP
+  $share_Id = $share.Id
+  $share_iqn = $share.IscsiQualifiedName
+  
+  #$share_hostname = $share.IoOwnerVMHost.Name
+  #$share_ip = [System.Net.Dns]::GetHostByName($share.IoOwnerVMHost).AddressList.IPAddressToString
+  
+  $shareDetails = [PSCustomObject]@{
+      HostName = $share.IoOwnerVMHost
+      IP       = $share_ip
+      LUNS     = $found_luns
+      vSAN_iSCSI_Target   = $myTarget
+      vSAN_Cluster_Name = $myCluster
+      vSAN_iSCSI_LUN_Prefix = $myLUN
+      vSAN_iSCSI_VMK = $myVMK
+      vSAN_iSCSI_Id = $share_Id
+      vSAN_iSCSI_iqn = $share_iqn
+  }
+  
+  
+  # Disconnect cleanly
+  Disconnect-VIServer -Server $myVC_url -Confirm:$false
+  
+  return $shareDetails
+}
