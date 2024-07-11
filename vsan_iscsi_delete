@@ -1,0 +1,38 @@
+function handler($context, $inputs) {
+  
+  $myVC_url = $inputs.VC_url
+  $myVC_user = $inputs.VC_user
+  $myVC_pass = $context.getsecret($inputs.VC_pass)
+  $myTarget = $inputs.vSAN_iSCSI_Target
+  $myCluster = $inputs.vSAN_Cluster_Name
+  $myId = $inputs.vSAN_iSCSI_Id
+  $myIQN = $inputs.vSAN_iSCSI_iqn 
+  
+  Write-Host $myTarget
+  Write-Host $myCluster
+  Write-Host $myId
+  Write-Host $myIQN
+
+
+  #
+  # Connect to vCenter using the credentials supplied in the 'action constants'
+  #
+
+  $connection = Connect-VIServer -Server $myVC_url -User $myVC_user -Password $myVC_pass -Protocol https -Force
+  Write-Host 'Connected: ' $connection.IsConnected
+  
+  
+  
+  # Remove LUNs
+  Get-VsanIscsiLun -target $myTarget -Cluster $myCluster  | Remove-VsanIscsiLun -confirm:$false
+  
+  # Remove target
+  Get-VsanIscsiTarget -Name $myTarget -Cluster $myCluster  | Remove-VsanIscsiTarget -Confirm:$false
+  
+  
+  
+  
+  # Disconnect cleanly
+  Disconnect-VIServer -Server $myVC_url -Confirm:$false
+  return $inputs
+}
