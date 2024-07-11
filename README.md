@@ -6,13 +6,8 @@ This is an ABX extension for Aria Automation to create iSCSI targets/LUNS.
 
 ### Action Constants
 
-We start by adding the Ansible Automation Platform URL and credentials that will be used by the actions. 
 
-1. Under  **Extensibility**, then **Actions Constants**.
-   <br>
-   <br>
-   <img src="./assets/images/action_constants.png" alt="AAP Actions" width="400"/>
-
+1. Navigate to  **Extensibility**, then **Actions Constants**.
 
 2. Add the following parameters:
    * ***VC_user**: vCenter Username
