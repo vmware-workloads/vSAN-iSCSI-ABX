@@ -1,0 +1,66 @@
+function handler($context, $inputs) {
+  
+  $myVC_url = $inputs.VC_url
+  $myVC_user = $inputs.VC_user
+  $myVC_pass = $context.getsecret($inputs.VC_pass)
+  $myTarget = $inputs.vSAN_iSCSI_Target
+  $myCluster = $inputs.vSAN_Cluster_Name
+  $myId = $inputs.vSAN_iSCSI_Id
+  $myLUN = $inputs.vSAN_iSCSI_LUN_Prefix
+  
+
+  Write-Host $myId
+  Write-Host $myTarget
+  Write-Host $myCluster
+  Write-Host $myLUN
+
+  
+  #
+  # Connect to vCenter using the credentials supplied in the 'action constants'
+  #
+
+  $connection = Connect-VIServer -Server $myVC_url -User $myVC_user -Password $myVC_pass -Protocol https -Force
+  Write-Host 'Connected: ' $connection.IsConnected
+  
+
+  #
+  # read target
+  #
+  
+  #$myTarget = (Get-VsanIscsiTarget -Cluster $myCluster -IscsiQualifiedName $myId).Name
+  
+  if ( -Not $myTarget ) {
+      Write-Host "ERROR: No Target found for Cluster " $myCluster
+      exit
+  }  
+
+ 
+  #
+  # Check shared LUNS for iSCSI
+  #
+  
+  $found_luns = Get-VsanIscsiLun -target $myTarget -Cluster $myCluster -Name "$myLUN*"
+  
+  if ( -Not $found_luns ) {
+      Write-Host "WARNING: No iSCSI LUNS found"
+  }  
+  
+  
+
+  
+  $shareDetails = [PSCustomObject]@{
+      HostName = $share.IoOwnerVMHost
+      LUNS     = $found_luns
+      vSAN_iSCSI_Target = $myTarget
+      vSAN_Cluster_Name = $myCluster
+      vSAN_iSCSI_LUN_Prefix = $myLUN
+      vSAN_iSCSI_Id = $myId
+  }
+  
+  
+  # Disconnect cleanly
+  Disconnect-VIServer -Server $myVC_url -Confirm:$false
+  
+  return $shareDetails
+
+}
