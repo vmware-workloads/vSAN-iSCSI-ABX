@@ -116,8 +116,6 @@ function handler($context, $inputs) {
   $share_Id = $share.Id
   $share_iqn = $share.IscsiQualifiedName
   
-  #$share_hostname = $share.IoOwnerVMHost.Name
-  #$share_ip = [System.Net.Dns]::GetHostByName($share.IoOwnerVMHost).AddressList.IPAddressToString
   
   $shareDetails = [PSCustomObject]@{
       HostName = $share.IoOwnerVMHost
