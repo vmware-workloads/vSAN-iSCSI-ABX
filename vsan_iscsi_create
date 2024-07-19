@@ -7,24 +7,26 @@ function handler($context, $inputs) {
   $myLUN = $inputs.vSAN_iSCSI_LUN_Prefix
   $myTarget = $inputs.vSAN_iSCSI_Target
   $myCluster = $inputs.vSAN_Cluster_Name
-  
-  $lun_size = 100  # default 100gb
-  $witness_lun_size = 1  # default 1gb
-  $witness_lun_name = "witness"  # name of the witness lun 
-  $witness_lun_id = 0  # keep this zero, or greater than number_of_data_luns
-  $number_of_data_luns = 3
+  $number_of_data_luns = $inputs.vSAN_iSCSI_dataluns
+  $lun_size = $inputs.vSAN_iSCSI_lunSize
   
   
   #
-  # Sanity check the witness lun ID
+  # Check if we need to create anything first
   #
   
-  if ( $witness_lun_id -ne 0 ) {
-      if ( $witness_lun_id -le $number_of_data_luns ) {
-          Write-Host "ERROR: Witness LUN ID should be greater than the number of data luns"
-          exit
-      }
-      
+  if ($number_of_data_luns -lt 1) { 
+      Write-Host "no data luns needed... abort: $number_of_data_luns"
+      exit
+  }
+  
+  #
+  # Check lun size
+  #
+  
+  if ($lun_size -lt 1) { 
+      Write-Host "invalid lun size... abort: $lun_size"
+      exit
   }
   
   
@@ -69,13 +71,22 @@ function handler($context, $inputs) {
       $share = New-VsanIscsiTarget -Cluster $myCluster -Name $myTarget
   }  
 
+
+  #
+  # Get the next avail lun number
+  #
+  
+  
+  $lun = ((get-vsaniscsilun).LunId | measure -Maximum).maximum+1
+  
  
   #
   # Check and Create shared LUNS for iSCSI as needed
   #
   
-  # first check/create the three data luns
-  $luns = 1..$number_of_data_luns
+
+ 
+  $luns = $lun..($number_of_data_luns+$lun)
  
   foreach ($lun in $luns) {
       $this_lun = $myLUN + '-' + $lun
@@ -94,17 +105,7 @@ function handler($context, $inputs) {
       }
   }
 
-  
-  # check/create the witness lun
-  $witness_lun_test = Get-VsanIscsiLun -target $myTarget -Cluster $myCluster | where { $_.Name -like $witness_lun_name }
-  
-  if (-Not $witness_lun_test) {
-      Write-Host "$witness_lun_name not found: creating"
-      New-VsanIscsiLun -CapacityGB $witness_lun_size -Name $witness_lun_name -LunId $witness_lun_id -Target $myTarget
-      
-      $new_witness_lun_test = Get-VsanIscsiLun -target $myTarget -Cluster $myCluster | where { $_.Name -like $witness_lun_name }
-      Write-Host 'witness_lun_test: ' $new_witness_lun_test
-  }
+ 
   
   
   #
@@ -116,6 +117,9 @@ function handler($context, $inputs) {
   $share_Id = $share.Id
   $share_iqn = $share.IscsiQualifiedName
   
+  $all_host_ips = (Get-VMHostNetworkAdapter -Name $myVMK).ip
+  
+
   
   $shareDetails = [PSCustomObject]@{
       HostName = $share.IoOwnerVMHost
@@ -127,6 +131,7 @@ function handler($context, $inputs) {
       vSAN_iSCSI_VMK = $myVMK
       vSAN_iSCSI_Id = $share_Id
       vSAN_iSCSI_iqn = $share_iqn
+      ALL_HOST_IPS = $all_host_ips
   }
   
   
