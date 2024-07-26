@@ -12,7 +12,7 @@ This is an ABX extension for Aria Automation to create iSCSI targets/LUNS.
 2. Add the following parameters:
    * **VC_user**: vCenter Username
    * **VC_password**: vCenter Password
-   * **VC_url**: vCenter URL
+   * **VC_url**: vCenter URL    
 
 ### Actions
 
@@ -27,5 +27,7 @@ Add the create / read / delete actions into Aria Automation:
    * 'Action Type' should be 'Action Constant'
    * Name should be the same name as the action constant (e.g. VC_user)
    * In the drop-down, select the appropriate value mapping
+
+4. Tick the box 'Set custom limits and retry options' and increase the memory limit to at least 1GB     
 
    
