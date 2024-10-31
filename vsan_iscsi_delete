@@ -12,6 +12,15 @@ function handler($context, $inputs) {
   Write-Host $myCluster
   Write-Host $myId
   Write-Host $myIQN
+  
+    
+  #
+  # Make sure we have just a hostname 
+  #
+  if ($myVC_url | select-string -Pattern http) { 
+      $myVC_url = ([uri]$myVC_url).Host 
+      
+  }
 
 
   #
