@@ -11,6 +11,19 @@ function handler($context, $inputs) {
   $lun_size = $inputs.vSAN_iSCSI_lunSize
   
   
+  Write-Host $myVC_url
+  
+  #
+  # Make sure we have just a hostname 
+  
+  #
+  if ($myVC_url | select-string -Pattern http) { 
+      $myVC_url = ([uri]$myVC_url).Host 
+      
+  }
+  
+  Write-Host $myVC_url
+  
   #
   # Check if we need to create anything first
   #
@@ -21,21 +34,40 @@ function handler($context, $inputs) {
   }
   
   #
-  # Check lun size
+  # Check variables 
   #
   
   if ($lun_size -lt 1) { 
       Write-Host "invalid lun size... abort: $lun_size"
       exit
   }
+  if ($myTarget -lt 1) { 
+      Write-Host "invalid target... abort: $lun_size"
+      exit
+  }
+  if ($myCluster -lt 1) { 
+      Write-Host "invalid cluster... abort: $lun_size"
+      exit
+  }
+  if ($myVMK -lt 1) { 
+      Write-Host "invalid VMK... abort: $lun_size"
+      exit
+  }  
+
   
   
   #
   # Connect to vCenter using the credentials supplied in the 'action constants'
   #
-
-  $connection = Connect-VIServer -Server $myVC_url -User $myVC_user -Password $myVC_pass -Protocol https -Force
-  Write-Host 'Connected: ' $connection.IsConnected
+  if ($connection = Connect-VIServer -Server $myVC_url -User $myVC_user -Password $myVC_pass -Protocol https -Force)
+  {
+      Write-Host 'Connected: ' $connection.IsConnected
+  }
+  else
+  {
+      Write-Host "Can't Connect... check details"
+      exit
+  }
   
 
   
@@ -53,10 +85,16 @@ function handler($context, $inputs) {
       Write-Host 'Enabling iSCSI'
 
       $config = Get-VsanClusterConfiguration -Cluster $myCluster
-      Set-VsanClusterConfiguration $config -IscsiTargetServiceEnabled $true -DefaultIscsiNetworkInterface $myVMK
-
-      $iscsiServ = Get-VsanClusterConfiguration -Cluster $myCluster
-      Write-Host 'iSCSI Enabled: ' $iscsiServ.IscsiTargetServiceEnabled
+      if (Set-VsanClusterConfiguration $config -IscsiTargetServiceEnabled $true -DefaultIscsiNetworkInterface $myVMK)
+      {
+          $iscsiServ = Get-VsanClusterConfiguration -Cluster $myCluster
+          Write-Host 'iSCSI Enabled: ' $iscsiServ.IscsiTargetServiceEnabled
+      }
+      else
+      {
+          Write-Host "Error Enabling iSCSI"
+          exit   
+      }
   }
   
 
