@@ -13,6 +13,14 @@ function handler($context, $inputs) {
   Write-Host $myTarget
   Write-Host $myCluster
   Write-Host $myLUN
+  
+  #
+  # Make sure we have just a hostname 
+  #
+  if ($myVC_url | select-string -Pattern http) { 
+      $myVC_url = ([uri]$myVC_url).Host 
+      
+  }
 
   
   #
