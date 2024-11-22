@@ -11,7 +11,7 @@ This is an ABX extension for Aria Automation to create iSCSI targets/LUNS.
 
 2. Add the following parameters:
    * **VC_user**: vCenter Username
-   * **VC_password**: vCenter Password
+   * **VC_pass**: vCenter Password
    * **VC_url**: vCenter URL    
 
 ### Actions
