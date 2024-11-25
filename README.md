@@ -30,4 +30,9 @@ Add the create / read / delete actions into Aria Automation:
 
 4. Tick the box 'Set custom limits and retry options' and increase the memory limit to at least 1GB     
 
+
+Create Custom Resource (Design > Custom Resources):
+
+1. Map the create/read/destroy actions to the appropriate added ABX actions
+2. Under 'Properties', paste the contents of `custom_resource_schema.yaml`
    
