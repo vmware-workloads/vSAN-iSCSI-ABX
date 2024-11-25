@@ -30,6 +30,7 @@ Add the create / read / delete actions into Aria Automation:
 
 4. Tick the box 'Set custom limits and retry options' and increase the memory limit to at least 1GB     
 
+### Custom Resource
 
 Create Custom Resource (Design > Custom Resources):
 
