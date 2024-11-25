@@ -12,6 +12,12 @@ function handler($context, $inputs) {
   
   
   Write-Host $myVC_url
+  Write-Host $myVMK
+  Write-Host $number_of_data_luns
+  Write-Host $myLUN
+  Write-Host $lun_size    
+  Write-Host $myTarget  
+  Write-Host $myCluster  
   
   #
   # Make sure we have just a hostname 
@@ -124,7 +130,7 @@ function handler($context, $inputs) {
   
 
  
-  $luns = $lun..($number_of_data_luns+$lun)
+  $luns = $lun..($number_of_data_luns+$lun-1)
  
   foreach ($lun in $luns) {
       $this_lun = $myLUN + '-' + $lun
