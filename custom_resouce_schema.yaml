@@ -1,0 +1,19 @@
+properties:
+  vSAN_iSCSI_VMK:
+    type: string
+    default: ''
+  vSAN_Cluster_Name:
+    type: string
+    default: ''
+  vSAN_iSCSI_Target:
+    type: string
+    default: ''
+  vSAN_iSCSI_lunSize:
+    type: integer
+    default: 1
+  vSAN_iSCSI_dataluns:
+    type: integer
+    default: 1
+  vSAN_iSCSI_LUN_Prefix:
+    type: string
+    default: ''
